@@ -61,7 +61,7 @@ StageMorph, SpriteMorph, StagePrompterMorph, Note, modules, isString, copy, Map,
 isNil, WatcherMorph, List, ListWatcherMorph, alert, console, TableMorph, BLACK,
 TableFrameMorph, ColorSlotMorph, isSnapObject, newCanvas, Symbol, SVG_Costume*/
 
-modules.threads = '2021-February-02';
+modules.threads = '2021-April-17';
 
 var ThreadManager;
 var Process;
@@ -1943,25 +1943,88 @@ Process.prototype.reportListItem = function (index, list) {
         return list.at(list.length());
     }
     if (index instanceof List && this.enableHyperOps) {
-        if (index.rank(true) === 1) { // quick - only look at first element
-            if (index.isEmpty()) {
-                return list.map(item => item);
-            }
-            return index.map(idx => list.at(idx));
-        }
-        return list.items(index);
+        return list.query(index);
     }
     return list.at(index);
 };
 
-// Process - experimental tabular list accessors
+// Process - experimental tabular list ops
 
 Process.prototype.reportTranspose = function (list) {
     this.assertType(list, 'list');
     return list.transpose();
 };
 
+Process.prototype.reportCrossproduct = function (lists) {
+    this.assertType(lists, 'list');
+    if (lists.isEmpty()) {
+        return lists;
+    }
+    this.assertType(lists.at(1), 'list');
+    return lists.crossproduct();
+};
+
+Process.prototype.reportReshape = function (list, shape) {
+    this.assertType(shape, 'list');
+    list = list instanceof List ? list : new List([list]);
+    return list.reshape(shape);
+};
+
+Process.prototype.reportSlice = function (list, indices) {
+    // currently not in use
+    this.assertType(list, 'list');
+    this.assertType(indices, 'list');
+    return list.slice(indices);
+};
+
 // Process - other basic list accessors
+
+Process.prototype.reportListAttribute = function (choice, list) {
+    var option = this.inputOption(choice);
+    switch (option) {
+    case 'length':
+        this.assertType(list, 'list');
+        return list.length();
+    case 'size':
+        this.assertType(list, 'list');
+        return list.size();
+    case 'rank':
+        return list instanceof List ? list.rank() : 0;
+    case 'dimensions':
+        return list instanceof List ? list.shape() : new List();
+    case 'flatten':
+        return list instanceof List ? list.ravel() : new List([list]);
+    case 'columns':
+        this.assertType(list, 'list');
+        return list.columns();
+    case 'transpose':
+        this.assertType(list, 'list');
+        return list.transpose();
+    case 'reverse':
+        this.assertType(list, 'list');
+        return list.reversed();
+    case 'lines':
+        this.assertType(list, 'list');
+        if (list.canBeTXT()) {
+            return list.asTXT();
+        }
+        throw new Error('unable to convert to lines');
+    case 'csv':
+        this.assertType(list, 'list');
+        if (list.canBeCSV()) {
+            return list.asCSV();
+        }
+        throw new Error('unable to convert to CSV');
+    case 'json':
+        this.assertType(list, 'list');
+        if (list.canBeJSON()) {
+            return list.asJSON();
+        }
+        throw new Error('unable to convert to JSON');
+    default:
+        return 0;
+    }
+};
 
 Process.prototype.reportListLength = function (list) {
     this.assertType(list, 'list');
@@ -2030,6 +2093,19 @@ Process.prototype.reportBasicNumbers = function (start, end) {
         }
     }
     return new List(result);
+};
+
+Process.prototype.reportListCombination = function (choice, lists) {
+    // experimental, currently not in use
+    var option = this.inputOption(choice);
+    switch (option) {
+    case 'append':
+        return this.reportConcatenatedLists(lists);
+    case 'cross product':
+        return this.reportCrossproduct(lists);
+    default:
+        return 0;
+    }
 };
 
 Process.prototype.reportConcatenatedLists = function (lists) {
@@ -2459,7 +2535,8 @@ Process.prototype.doRepeat = function (counter, body) {
         outer = this.context.outerContext, // for tail call elimination
         isCustomBlock = this.context.isCustomBlock;
 
-    if (counter < 1) { // was '=== 0', which caused infinite loops on non-ints
+    if (isNaN(counter) || counter < 1) { 
+	// was '=== 0', which caused infinite loops on non-ints
         return null;
     }
     this.popContext();
@@ -2534,7 +2611,7 @@ Process.prototype.doForEach = function (upvar, list, script) {
     this.pushContext();
     this.context.outerContext.variables.addVar(upvar);
     this.context.outerContext.variables.setVar(upvar, next);
-    this.evaluate(script, new List([next]), true);
+    this.evaluate(script, new List(/*[next]*/), true);
 };
 
 Process.prototype.doFor = function (upvar, start, end, script) {
@@ -2817,12 +2894,23 @@ Process.prototype.reportCombine = function (list, reporter) {
 
     var next, current, index, parms;
     this.assertType(list, 'list');
-    if (list.length() < 2) {
-        this.returnValueToParentContext(list.length() ? list.at(1) : 0);
-        return;
-    }
     if (list.isLinked) {
         if (this.context.accumulator === null) {
+            // check for special cases to speed up
+            if (this.canRunOptimizedForCombine(reporter)) {
+                return this.reportListAggregation(
+                    list,
+                    reporter.expression.selector
+                );
+            }
+
+            // test for base cases
+            if (list.length() < 2) {
+                this.returnValueToParentContext(list.length() ? list.at(1) : 0);
+                return;
+            }
+
+            // initialize the accumulator
             this.context.accumulator = {
                 source : list.cdr(),
                 idx : 1,
@@ -2843,6 +2931,21 @@ Process.prototype.reportCombine = function (list, reporter) {
         next = this.context.accumulator.source.at(1);
     } else { // arrayed
         if (this.context.accumulator === null) {
+            // check for special cases to speed up
+            if (this.canRunOptimizedForCombine(reporter)) {
+                return this.reportListAggregation(
+                    list,
+                    reporter.expression.selector
+                );
+            }
+
+            // test for base cases
+            if (list.length() < 2) {
+                this.returnValueToParentContext(list.length() ? list.at(1) : 0);
+                return;
+            }
+
+            // initialize the accumulator
             this.context.accumulator = {
                 idx : 1,
                 target : list.at(1)
@@ -2868,6 +2971,62 @@ Process.prototype.reportCombine = function (list, reporter) {
         parms.push(list);
     }
     this.evaluate(reporter, new List(parms));
+};
+
+Process.prototype.reportListAggregation = function (list, selector) {
+    // private - used by reportCombine to optimize certain commutative
+    // operations such as sum, product, min, max hyperized all at once
+    var len = list.length(),
+        result, i;
+    if (len === 0) {
+        switch (selector) {
+        case 'reportProduct':
+            return 1;
+        case 'reportMin':
+            return Infinity;
+        case 'reportMax':
+            return -Infinity;
+        default: // reportSum
+            return 0;
+        }
+    }
+    result = list.at(1);
+    if (len > 1) {
+        for (i = 2; i <= len; i += 1) {
+            result = this[selector](result, list.at(i));
+        }
+    }
+    return result;
+};
+
+Process.prototype.canRunOptimizedForCombine = function (aContext) {
+    // private - used by reportCombine to check for optimizable
+    // special cases
+    var op = aContext.expression.selector,
+        eligible;
+    if (!op) {
+        return false;
+    }
+    eligible = ['reportSum', 'reportProduct', 'reportMin', 'reportMax'];
+    if (!contains(eligible, op)) {
+        return false;
+    }
+
+    // scan the expression's inputs, we can assume there are exactly two,
+    // because we're only looking at eligible selectors. Make sure none is
+    // a non-empty input slot or a variable getter whose name doesn't
+    // correspond to an input of the context.
+    // make sure the context has either no or exactly two inputs.
+    if (aContext.inputs.length === 0) {
+        return aContext.expression.inputs().every(each => each.bindingID);
+    }
+    if (aContext.inputs.length !== 2) {
+        return false;
+    }
+    return aContext.expression.inputs().every(each =>
+        each.selector === 'reportGetVar' &&
+            contains(aContext.inputs, each.blockSpec)
+    );
 };
 
 // Process interpolated primitives
@@ -3765,7 +3924,14 @@ Process.prototype.reportMin = function (a, b) {
 };
 
 Process.prototype.reportBasicMin = function (a, b) {
-    return Math.min(+a, +b);
+    // return Math.min(+a, +b); // enhanced to also work with text
+    var x = +a,
+        y = +b;
+    if (isNaN(x) || isNaN(y)) {
+        x = a;
+        y = b;
+    }
+    return x < y ? x : y;
 };
 
 Process.prototype.reportMax = function (a, b) {
@@ -3773,7 +3939,14 @@ Process.prototype.reportMax = function (a, b) {
 };
 
 Process.prototype.reportBasicMax = function (a, b) {
-    return Math.max(+a, +b);
+    // return Math.max(+a, +b); // enhanced to also work with text
+    var x = +a,
+        y = +b;
+    if (isNaN(x) || isNaN(y)) {
+        x = a;
+        y = b;
+    }
+    return x > y ? x : y;
 };
 
 // Process logic primitives - hyper-diadic / monadic where applicable
@@ -4853,10 +5026,12 @@ Process.prototype.reportRayLengthTo = function (name) {
         dir,
         a, b, x, y,
         top, bottom, left, right,
-        hSect, vSect,
+        circa, hSect, vSect,
         point, hit,
         temp,
         width, imageData;
+
+    circa = (num) => Math.round(num * 10000000) / 10000000; // good enough
 
     hSect = (yLevel) => {
         var theta = radians(dir);
@@ -4864,12 +5039,13 @@ Process.prototype.reportRayLengthTo = function (name) {
         a = b * Math.tan(theta);
         x = rc.x + a;
         if (
-            (x === rc.x &&
+            (circa(x) === circa(rc.x) &&
                 ((dir === 180 && rc.y < yLevel) ||
                 dir === 0 && rc.y > yLevel)
             ) ||
             (x > rc.x && dir >= 0 && dir < 180) ||
-            (x < rc.x && dir >= 180 && dir < 360)
+            (circa(x) < circa(rc.x) &&
+                dir >= 180 && dir < 360)
         ) {
             if (x >= left && x <= right) {
                 intersections.push(new Point(x, yLevel));
@@ -4883,7 +5059,7 @@ Process.prototype.reportRayLengthTo = function (name) {
         a = b * Math.tan(theta);
         y = rc.y + a;
         if (
-            (y === rc.y &&
+            (circa(y) === circa(rc.y) &&
                 ((dir === 90 && rc.x < xLevel) ||
                 dir === 270 && rc.x > xLevel)
             ) ||
@@ -5452,12 +5628,18 @@ Process.prototype.reportMouseDown = function () {
 };
 
 Process.prototype.reportKeyPressed = function (keyString) {
+    // hyper-monadic
     var stage;
     if (this.homeContext.receiver) {
         stage = this.homeContext.receiver.parentThatIsA(StageMorph);
         if (stage) {
             if (this.inputOption(keyString) === 'any key') {
                 return Object.keys(stage.keysPressed).length > 0;
+            }
+            if (keyString instanceof List && this.enableHyperOps) {
+                return keyString.map(
+                    each => stage.keysPressed[each] !== undefined
+                );
             }
             return stage.keysPressed[keyString] !== undefined;
         }
@@ -6264,7 +6446,7 @@ Process.prototype.reportAtomicFindFirst = function (reporter, list) {
             return src[i];
          }
     }
-    return false;
+    return '';
 };
 
 Process.prototype.reportAtomicCombine = function (list, reporter) {
@@ -6275,14 +6457,21 @@ Process.prototype.reportAtomicCombine = function (list, reporter) {
     // #3 - optional | index
     // #4 - optional | source list
 
+    var result, src, len, formalParameterCount, parms, func, i;
     this.assertType(list, 'list');
-    var result = '',
-        src = list.itemsArray(),
-        len = src.length,
-        formalParameterCount = reporter.inputs.length,
-        parms,
-        func,
-        i;
+
+    // check for special cases to speed up
+    if (this.canRunOptimizedForCombine(reporter)) {
+        return this.reportListAggregation(
+            list,
+            reporter.expression.selector
+        );
+    }
+
+    result = '';
+    src = list.itemsArray();
+    len = src.length;
+    formalParameterCount = reporter.inputs.length;
 
 	if (len === 0) {
  		return result;
@@ -6943,6 +7132,15 @@ JSCompiler.prototype.compileExpression = function (block) {
             'compiling does not yet support\n' +
             'custom blocks'
         );
+
+    // special evaluation primitives
+    case 'doRun':
+    case 'evaluate':
+        return 'invoke(' +
+            this.compileInput(inputs[0]) +
+            ',' +
+            this.compileInput(inputs[1]) +
+            ')';
 
     // special command forms
     case 'doSetVar': // redirect var to process

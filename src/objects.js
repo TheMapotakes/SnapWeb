@@ -84,7 +84,7 @@ BlockEditorMorph, BlockDialogMorph, PrototypeHatBlockMorph,  BooleanSlotMorph,
 localize, TableMorph, TableFrameMorph, normalizeCanvas, VectorPaintEditorMorph,
 AlignmentMorph, Process, WorldMap, copyCanvas, useBlurredShadows*/
 
-modules.objects = '2021-January-30';
+modules.objects = '2021-April-23';
 
 var SpriteMorph;
 var StageMorph;
@@ -1259,6 +1259,7 @@ SpriteMorph.prototype.initBlocks = function () {
             defaults: [['encode URI'], "Abelson & Sussman"]
         },
         reportCompiled: { // experimental
+            dev: true,
             type: 'reporter',
             category: 'operators',
             spec: 'compile %repRing for %n args',
@@ -1323,10 +1324,17 @@ SpriteMorph.prototype.initBlocks = function () {
             category: 'lists',
             spec: 'all but first of %l'
         },
-        reportListLength: {
+        reportListLength: { // deprecated as of v6.6
+            dev: true,
             type: 'reporter',
             category: 'lists',
             spec: 'length of %l'
+        },
+        reportListAttribute: {
+            type: 'reporter',
+            category: 'lists',
+            spec: '%la of %l',
+            defaults: [['length']]
         },
         reportListContainsItem: {
             type: 'predicate',
@@ -1340,7 +1348,6 @@ SpriteMorph.prototype.initBlocks = function () {
             spec: 'is %l empty?'
         },
         reportListIndex: {
-            dev: true,
             type: 'reporter',
             category: 'lists',
             spec: 'index of %s in %l',
@@ -1378,17 +1385,38 @@ SpriteMorph.prototype.initBlocks = function () {
             spec: 'numbers from %n to %n',
             defaults: [1, 10]
         },
-
+    /*
+        reportListCombination: { // currently not in use
+            type: 'reporter',
+            category: 'lists',
+            spec: '%mlfunc %lists',
+            defaults: [['append']]
+        },
+    */
         reportConcatenatedLists: {
             type: 'reporter',
             category: 'lists',
             spec: 'append %lists'
         },
-        reportTranspose: {
+        reportTranspose: { // deprecated
             type: 'reporter',
             category: 'lists',
             spec: 'transpose %l'
         },
+        reportReshape: {
+            type: 'reporter',
+            category: 'lists',
+            spec: 'reshape %l to %nums',
+            defaults: [null, [4, 3]]
+        },
+    /*
+        reportSlice: { // currently not in use
+            type: 'reporter',
+            category: 'lists',
+            spec: 'slice %l by %nums',
+            defaults: [null, [2, -1]]
+        },
+    */
 
         // HOFs
         reportMap: {
@@ -1577,8 +1605,19 @@ SpriteMorph.prototype.initBlockMigrations = function () {
             offset: 1
         },
         reportTableRotated: {
-            selector: 'reportTranspose',
-            offset: 0
+            selector: 'reportListAttribute',
+            inputs: [['transpose']],
+            offset: 1
+        },
+        reportTranspose: {
+            selector: 'reportListAttribute',
+            inputs: [['transpose']],
+            offset: 1
+        },
+        reportListLength: {
+            selector: 'reportListAttribute',
+            inputs: [['length']],
+            offset: 1
         }
     };
 };
@@ -1698,18 +1737,24 @@ SpriteMorph.prototype.blockAlternatives = {
         'reportQuotient', 'reportPower', 'reportModulus', 'reportAtan2'],
     reportLessThan: ['reportLessThanOrEquals', 'reportEquals',
         'reportNotEquals', 'reportGreaterThan', 'reportGreaterThanOrEquals'],
-    reportEquals: ['reportNotEquals', 'reportLessThan',
+    reportEquals: ['reportIsIdentical', 'reportNotEquals', 'reportLessThan',
         'reportLessThanOrEquals', 'reportGreaterThan',
         'reportGreaterThanOrEquals'],
-    reportNotEquals: ['reportEquals', 'reportLessThan',
+    reportNotEquals: ['reportEquals', 'reportIsIdentical', 'reportLessThan',
         'reportLessThanOrEquals', 'reportGreaterThan',
         'reportGreaterThanOrEquals'],
     reportGreaterThan: ['reportGreaterThanOrEquals', 'reportEquals',
-        'reportNotEquals', 'reportLessThan', 'reportLessThanOrEquals'],
+        'reportIsIdentical', 'reportNotEquals', 'reportLessThan',
+        'reportLessThanOrEquals'],
     reportLessThanOrEquals: ['reportLessThan', 'reportEquals',
-        'reportNotEquals', 'reportGreaterThan', 'reportGreaterThanOrEquals'],
+        'reportIsIdentical', 'reportNotEquals', 'reportGreaterThan',
+        'reportGreaterThanOrEquals'],
     reportGreaterThanOrEquals: ['reportGreaterThan', 'reportEquals',
-        'reportNotEquals', 'reportLessThan', 'reportLessThanOrEquals'],
+        'reportIsIdentical', 'reportNotEquals', 'reportLessThan',
+        'reportLessThanOrEquals'],
+    reportIsIdentical: ['reportEquals', 'reportNotEquals', 'reportLessThan',
+        'reportLessThanOrEquals', 'reportGreaterThan',
+        'reportGreaterThanOrEquals'],
     reportAnd: ['reportOr'],
     reportOr: ['reportAnd'],
 
@@ -1718,11 +1763,6 @@ SpriteMorph.prototype.blockAlternatives = {
     doChangeVar: ['doSetVar'],
     doShowVar: ['doHideVar'],
     doHideVar: ['doShowVar'],
-
-    // lists
-    reportCDR: ['reportTranspose', 'reportListLength'],
-    reportTranspose: ['reportCDR', 'reportListLength'],
-    reportListLength: ['reportTranspose', 'reportCDR'],
 
     // HOFs
     reportMap: ['reportKeep', 'reportFindFirst'],
@@ -2204,6 +2244,9 @@ SpriteMorph.prototype.blockForSelector = function (selector, setDefaults) {
             for (i = 0; i < defaults.length; i += 1) {
                 if (defaults[i] !== null) {
                     inputs[i].setContents(defaults[i]);
+                    if (inputs[i] instanceof MultiArgMorph) {
+                        inputs[i].defaults = defaults[i];
+                    }
                 }
             }
         }
@@ -2754,7 +2797,7 @@ SpriteMorph.prototype.blockTemplates = function (category) {
         blocks.push(block('reportListItem'));
         blocks.push(block('reportCDR'));
         blocks.push('-');
-        blocks.push(block('reportListLength'));
+        blocks.push(block('reportListAttribute'));
         blocks.push(block('reportListIndex'));
         blocks.push(block('reportListContainsItem'));
         blocks.push(block('reportListIsEmpty'));
@@ -2767,7 +2810,7 @@ SpriteMorph.prototype.blockTemplates = function (category) {
         blocks.push(block('doForEach'));
         blocks.push('-');
         blocks.push(block('reportConcatenatedLists'));
-        // blocks.push(block('reportTranspose'));
+        blocks.push(block('reportReshape'));
         blocks.push('-');
         blocks.push(block('doAddToList'));
         blocks.push(block('doDeleteFromList'));
@@ -2941,10 +2984,10 @@ SpriteMorph.prototype.freshPalette = function (category) {
                         'reportCONS',
                         'reportListItem',
                         'reportCDR',
-                        'reportListLength',
+                        'reportListAttribute',
                         'reportListIndex',
                         'reportConcatenatedLists',
-                        // 'reportTranspose',
+                        'reportReshape',
                         'reportListContainsItem',
                         'reportListIsEmpty',
                         'doForEach',
@@ -5070,7 +5113,7 @@ SpriteMorph.prototype.applyGraphicsEffects = function (canvas) {
             }
             v = max / 255;
 
-            h = (h + hueShift * 360 / 200) % 360;
+            h = (((h + hueShift * 360 / 200) % 360) + 360) % 360;
             s = Math.max(0, Math.min(s + saturationShift / 100, 1));
             v = Math.max(0, Math.min(v + brightnessShift / 100, 1));
 
@@ -5334,7 +5377,11 @@ SpriteMorph.prototype.positionTalkBubble = function () {
     var stage = this.parentThatIsA(StageMorph),
         stageScale = stage ? stage.scale : 1,
         bubble = this.talkBubble(),
-        middle = this.center().y;
+        bottom = this.bottom(),
+        step = this.extent().divideBy(10)
+            .max(new Point(5, 5).scaleBy(stageScale))
+            .multiplyBy(new Point(-1, 1));
+
     if (!bubble) {return null; }
     bubble.show();
     if (!bubble.isPointingRight) {
@@ -5344,9 +5391,10 @@ SpriteMorph.prototype.positionTalkBubble = function () {
     }
     bubble.setLeft(this.right());
     bubble.setBottom(this.top());
-    while (!this.isTouching(bubble) && bubble.bottom() < middle) {
-        bubble.moveBy(new Point(-1, 1).scaleBy(stageScale));
+    while (!this.isTouching(bubble) && bubble.bottom() < bottom) {
+        bubble.moveBy(step);
     }
+    bubble.moveBy(step.mirror());
     if (!stage) {return null; }
     if (bubble.right() > stage.right()) {
         bubble.isPointingRight = false;
@@ -7186,7 +7234,7 @@ SpriteMorph.prototype.inheritedMethods = function () {
 
 // SpriteMorph thumbnail
 
-SpriteMorph.prototype.thumbnail = function (extentPoint, recycleMe) {
+SpriteMorph.prototype.thumbnail = function (extentPoint, recycleMe, noCorpse) {
     // answer a new Canvas of extentPoint dimensions containing
     // my thumbnail representation keeping the originial aspect ratio
     // a "recycleMe canvas can be passed for re-use
@@ -7216,7 +7264,7 @@ SpriteMorph.prototype.thumbnail = function (extentPoint, recycleMe) {
     }
 
     ctx.save();
-    if (this.isCorpse) {
+    if (this.isCorpse && !noCorpse) {
         ctx.globalAlpha = 0.3;
     }
     if (w && h && src.width && src.height) {
@@ -7227,7 +7275,7 @@ SpriteMorph.prototype.thumbnail = function (extentPoint, recycleMe) {
             Math.floor(yOffset / scale)
         );
     }
-    if (this.isCorpse) {
+    if (this.isCorpse && !noCorpse) {
         ctx.restore();
         xOut('white', 0.8, 6);
         xOut('black', 0.8, 1);
@@ -8915,7 +8963,7 @@ StageMorph.prototype.blockTemplates = function (category) {
         blocks.push(block('reportListItem'));
         blocks.push(block('reportCDR'));
         blocks.push('-');
-        blocks.push(block('reportListLength'));
+        blocks.push(block('reportListAttribute'));
         blocks.push(block('reportListIndex'));
         blocks.push(block('reportListContainsItem'));
         blocks.push(block('reportListIsEmpty'));
@@ -8928,7 +8976,7 @@ StageMorph.prototype.blockTemplates = function (category) {
         blocks.push(block('doForEach'));
         blocks.push('-');
         blocks.push(block('reportConcatenatedLists'));
-        // blocks.push(block('reportTranspose'));
+        blocks.push(block('reportReshape'));
         blocks.push('-');
         blocks.push(block('doAddToList'));
         blocks.push(block('doDeleteFromList'));
@@ -9037,18 +9085,19 @@ StageMorph.prototype.fullImage = Morph.prototype.fullImage;
 
 // StageMorph thumbnail
 
-StageMorph.prototype.thumbnail = function (extentPoint, recycleMe) {
+StageMorph.prototype.thumbnail = function (extentPoint, recycleMe, noWatchers) {
     // answer a new Canvas of extentPoint dimensions containing
     // my thumbnail representation keeping the originial aspect ratio
     // a "recycleMe canvas can be passed for re-use
-    return this.fancyThumbnail(extentPoint, null, false, recycleMe);
+    return this.fancyThumbnail(extentPoint, null, false, recycleMe, noWatchers);
 };
 
 StageMorph.prototype.fancyThumbnail = function (
     extentPoint,
     excludedSprite,
     nonRetina,
-    recycleMe
+    recycleMe,
+    noWatchers
 ) {
     var src = this.getImage(),
         scale = Math.min(
@@ -9087,7 +9136,7 @@ StageMorph.prototype.fancyThumbnail = function (
         ctx.restore();
     }
     this.children.forEach(morph => {
-        if (morph.isVisible && (morph !== excludedSprite)) {
+        if ((isSnapObject(morph) || !noWatchers) && morph.isVisible && (morph !== excludedSprite)) {
             fb = morph.fullBounds();
             fimg = morph.fullImage();
             if (fimg.width && fimg.height) {
@@ -11222,7 +11271,7 @@ CellMorph.prototype.render = function (ctx) {
             ctx.shadowOffsetY = this.border;
             ctx.shadowBlur = this.border;
             ctx.shadowColor = this.color.darker(80).toString();
-            this.drawShadow(ctx, this.edge, this.border / 2);
+            this.drawShadow(ctx, this.edge, 0);
         }
     }
 };
@@ -11236,10 +11285,8 @@ CellMorph.prototype.drawShadow = function (context, radius, inset) {
     context.beginPath();
     context.moveTo(0, h - offset);
     context.lineTo(0, offset);
-    context.stroke();
 
     // top left:
-    context.beginPath();
     context.arc(
         offset,
         offset,
@@ -11248,11 +11295,8 @@ CellMorph.prototype.drawShadow = function (context, radius, inset) {
         radians(-90),
         false
     );
-    context.stroke();
 
     // top right:
-    context.beginPath();
-    context.moveTo(offset, 0);
     context.lineTo(w - offset, 0);
     context.stroke();
 };
@@ -11981,7 +12025,9 @@ WatcherMorph.prototype.parseTxt = function () {
 
 WatcherMorph.prototype.setStyle = function (style) {
     this.style = style;
+    this.changed();
     this.fixLayout();
+    this.rerender();
 };
 
 WatcherMorph.prototype.styleNormal = function () {
@@ -12147,7 +12193,7 @@ StagePrompterMorph.prototype.fixLayout = function () {
     );
     this.button.setCenter(this.inputField.center());
     this.button.setLeft(this.inputField.right() + this.border);
-    this.setHeight(
+    this.bounds.setHeight(
         this.inputField.bottom()
             - this.top()
             + this.edge

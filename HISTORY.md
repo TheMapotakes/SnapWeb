@@ -2,6 +2,267 @@
 
 ## in development:
 
+## 6.8.1
+* **Notable Fixes:**
+    * fixed peeling off niladic custom block instances from prototype templates
+
+### 2021-05-04
+* new dev version
+* gui: fixed "peeling off" niladic custom block instances from prototype templates
+* prepared patch
+
+## 6.8.0
+* **New Features:**
+    * first-class colors, sorta, in the new "Colors" library, thanks, Brian!
+    * you can now also "peel off" custom block instances from their prototype templates in the block editor
+* **Notable Changes:**
+    * speed-up talk bubble positioning by 5x
+* **Notable Fixes:**
+    * work around a floating point precision glitch in "ray length"
+    * fixed an occasional rendering glitch when changing the display style of a variable watcher
+    * fixed color effect for negative inputs, thanks, Brian!
+    * fixed some issues round bignums, thanks, Brian!
+* **Documentation Updates:**
+    * updated manual, thanks Brian!
+
+### 2021-05-03
+* new versions of "Colors" and bignums libraries, updated documentation, thanks, Brian
+* bumped dev version to v6.8
+* prepared minor release
+
+### 2021-04-23
+* objects: fixed color effect for negative inputs, thanks, Brian!
+
+### 2021-04-17
+* objects: fixed an occasional rendering glitch when changing the display style of a variable watcher
+* objects: tweaked CellMorph shadow rendering
+* byob: enable "peeling off" custom block instances from their prototype templates
+
+### 2021-04-17
+* new dev version
+* threads: worked around a floating point precision glitch in "ray length"
+* objects: speed-up  talk bubble positioning by 5x
+
+## 6.7.4
+* **Notable Fixes:**
+    * fixed DEAL in the APL library, thanks, Brian!
+    * fixed a resizing edge case bug for the stage prompter (ASK command)
+    * fixed finding "index of" block by search 
+
+### 2021-04-09
+* objects fixed #2821 - "index of" block not found by search
+* prepared patch
+
+### 2021-03-28
+* new dev version
+* fixed DEAL in the APL library, thanks, Brian!
+* objects: fixed a resizing edge case bug for the stage prompter (ASK command)
+
+## 6.7.3
+* **Notable Changes:**
+    * hyperized "key _ pressed?" predicate
+* **Notable Fixes:**
+    * repeat stops when encountering a non-numerical counter input, thanks, Stefan!
+    * updated list-utilities library, thanks, Brian!
+* **Documentation Updates:**
+    * updated manual with links in the toc, thanks Brian!
+
+### 2021-03-19
+* manual updated with active links and links in the toc, thanks, Brian!
+* threads: hyperized "key _ pressed?" predicate
+* prepared patch
+
+### 2021-03-17
+* new dev version
+* threads fixed repeat for non-numbers, thanks Stefan!
+* updated list-utilities library, thanks, Brian!
+
+## 6.7.2
+* **Notable Changes:**
+    * disabled empty-slot implicit parameter in FOREACH
+* **Notable Fixes:**
+    * fixed "transpose" in the APL library, thanks, Brian!
+* **Translation Updates:**
+    * Catalan, thanks, Joan!
+
+### 2021-03-15
+* new dev version
+* Catalan translation update, thanks, Joan!
+* lists, apl: fixed "transpose", thanks, Brian!
+* threads: disabled empty-slot implicit parameter in FOREACH
+* prepared patch release
+
+## 6.7.1
+* **Notable Fixes:**
+    * fixed recursive calls in PIPE
+    * the "length of list" block no longer appears twice in search results
+    * prevent inserting items at non-integer / out-of-bounds indices
+    * save all items of a heterogeneously structured linked/arrayed list
+
+### 2021-03-09
+* new dev version
+* objects: fixed #2797
+* fixed recursive calls in PIPE
+* lists: prevent usage of lists as dictionaries
+* store: fixed #2798
+* prepared patch
+
+## 6.7.0
+* **New Features:**
+    * undelete sprites
+* **Notable Changes:**
+    * optimized special cases for COMBINE (sum, product, min, max) by up to 34 x
+    *  rebind (relabel) recursive calls when duplicating a custom block definition 
+    * custom block label parts inside the prototype (in the block editor) are now displayed the same as in block instances
+    * variadic ring inputs are now arranged vertically (e.g. the reporter rings in PIPE)
+    * changed zebra-coloring for yellow custom block prototypes (in the block editor) so the hat block changes the shade, not the prototype
+    * improved layout and rendering of (+) buttons in custom block prototypes
+    * updated libraries: list utilities, variadic reporters, iteration-composition, colors and APL, thanks, Brian!
+* **Notable Fixes:**
+    * displaying a table containing the stage no longer crashes the page
+    * correct identities when combining the items of an empty list with + /  * / min / max
+* **Documentation Updates:**
+    * updated manual, thanks Brian!
+* **Translation Updates:**
+    * German
+
+### 2021-03-08
+* prepared minor release
+
+### 2021-03-06
+* updated libraries and manual, thanks, Brian!
+
+### 2021-03-05
+* tables, objects: displaying a table containing the stage no longer crashes the page
+* gui: added "trash is empty" information, commented out for now
+* gui: changed gui strings for undelete feature
+* updated German translation
+* byob: rebind (relabel) recursive calls when duplicating a custom block definition 
+
+### 2021-03-04
+* gui: added trash button for undeleting sprites
+* gui: accept drops of sprites and sprite-icons in trash button
+* gui: animate undeleted sprites to glide back onstage
+
+### 2021-03-03
+* symbols: added "trash" symbol
+* symbols: added "trashFull" symbol
+
+### 2021-03-02
+* threads: optimized special cases for COMBINE (sum, product, min, max) by up to 34 x
+* threads: optimized special cases for compiled version of COMBINE
+* gui, objects: undelete sprites 
+* threads: correct identities when combining the items of an empty list with + /  * / min / max
+* gui: pushed dev version to 6.7 because of new documentable features
+
+### 2021-03-01
+* byob: improved layout and rendering of (+) buttons in custom block prototypes
+* byob: display custom block label parts in the prototype (in the block editor) the same as in block instances
+* byob: changed zebra-coloring for yellow custom block prototypes (in the block editor) so the hat block changes the shade, not the prototype
+
+### 2021-02-27
+* new dev version
+* blocks: arrange variadic ring inputs vertically (e.g. the reporter rings in PIPE)
+* blocks: removed a redundant unused case for block highlights 
+
+## 6.6.0
+* **New Features:**
+    * new "reshape" primitive for lists
+    * list operations as dropdown menu of new "length of list" block
+* **Notable Changes:**
+    * 2D lists inside ITEM OF now have the right order of dimensions (rows, columns, planes, etc.)
+    * changed "length of list" to become a general list operations primitive
+    * enhanced MIN and MAX to also operate on text
+    * added "is _ identical to _ ?" to relabel options of equals
+    * enabled scientific notation in numeric text fields
+    * removed experimental "transpose (list)" primitive - has been merged into "length of list"
+    * removed "reverse" block from the "frequency distribution analysis" library
+* **Notable Fixes:**
+    * don't show internal "compile" reporter in search results
+    * fixed a bug for showing the senders of a message
+    * compiled "find first" now also reports empty instead of false if none is found
+    * support one level of currying in the experimental JS JIT compiler
+* **Documentation Updates:**
+    * updated manual with hyper-semantics of ITEM OF, thanks Brian!
+* **Translation Updates:**
+    * German
+
+### 2021-02-25
+* updated manual, thanks, Brian!
+* prepared minor release
+
+### 2021-02-23
+* threads, objects: commented out experimental slice() primitive
+
+### 2021-02-20
+* lists: removed experimental list.slice() feature from production code
+* threads, objects: experimental list slice() primitive, hidden, available via find / relabel
+
+### 2021-02-16
+* objects: reverted list palette reordering
+
+### 2021-02-15
+* threads: fixed #2783
+* threads: fixed #2784
+* blocks: took out "transpose" from "length" dropdown
+* German translation update
+* removed "reverse" block from the "frequency distribution analysis" library
+* support for ranges of indices using zero and negative numbers inside index-lists in "item of"
+
+### 2021-02-14
+* lists: fixed transcription typos in strideTranspose(), thanks, Brian!
+
+### 2021-02-13
+* blocks, threads, lists: distinguish between "columns" (<3D) and (deep) "transpose"
+* byob: fixed a bug for showing the senders of a message
+
+### 2021-02-12
+* blocks, threads, lists: distinguish between "transpose" (<3D) and "deep transpose"
+
+### 2021-02-11
+* objects: rearranged the blocks in the lists category palette
+* lists: fixed list.reverse() to return a shallow copy instead of mutating the original
+
+### 2021-02-10
+* objects: added "is _ identical to _ ?" to relabel options of equals
+* morphic: enable scientific notation in numeric text fields
+* threads: changed error message for "lines" conversion
+* updated German translations
+
+### 2021-02-09
+* lists: refactored matrix ops to avoid JS stack overflows
+* objects: fixed internal migration for "transpose" block
+* threads: enhanced MIN and MAX to also operate on text
+* threads: enhanced list attributes 'rank', 'shape' and 'ravel' to also handle scalars
+* threads: enhanced 'reshape' to also handle scalars
+* lists: limit crash-dangerous matrix-exploding ops to 1 MM elements (reshape, crossproduct)
+* objects, threads: took out "crossproduct" primitive option from the palette
+* objects, blocks: added defaults to RESHAPE in palette
+
+### 2021-02-08
+* lists, objects, threads: new RESHAPE primitive
+* lists: added internal naive (recursive)  version of CROSSPRODUCT
+* lists: added TRANSPOSE for higher dimensions, thanks, Brian!
+* objects, blocks, threads: added "cross product" to "append" as dropdown, and "reverse" to "length"
+
+### 2021-02-06
+* simplified private list.range() method
+* blocks: changed wordings for list attributes
+
+### 2021-02-05
+* new manual for v6.6, thanks, Brian!
+* objects: don't show internal "compile" reporter in search results
+* blocks, objects, threads: added experimental "atribute of list" reporter primitive to dev mode
+* objects: replaced "length of list" primitive with new "attribute of list" reporter
+* objects: added "txt" option to list attribure dropdown - not yet operational
+* lists, threads: added "txt" list conversion
+
+### 2021-02-04
+* lists, threads: changed query semantics for table selectors in ITEM OF to rows, columns, planes, etc.
+* pushed dev version number
+* lists: tweaked query()
+* cloud: trimmed usernames, thanks, Michael
+
 ### 2021-02-03
 * new dev version
 
