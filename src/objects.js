@@ -135,7 +135,7 @@ SpriteMorph.prototype.attributes =
 
 SpriteMorph.prototype.categories =
     [
-        'motion',
+        'MBlock',
         'control',
         'looks',
         'sensing',
